@@ -129,7 +129,7 @@ mod test_stack {
                         if let Some(pop) = self.working.pop() {
                             self.expect.push_back(pop);
                         } else {
-                            return Ok(Judgment::Red("pop from empty stack".to_string()));
+                            return Err("bad sim: more pops than pushes".to_string());
                         }
                     }
                     StackMessage::Value(_) => return Err("bad sim: Value in scen".to_string()),
@@ -183,7 +183,7 @@ mod test_stack {
                 }
                 Value(_) => panic!("Value in demo_impl"),
             };
-            println!("demo_impl: {:?} -> {:?}", msg, ret);
+            // println!("demo_impl_good: {:?} -> {:?}", msg, ret);
             ret
         }
     }
@@ -192,5 +192,123 @@ mod test_stack {
     fn test_scenario_1() {
         let mut stack = vec![];
         judge_panic(scenario_1(), demo_impl_good(&mut stack));
+    }
+
+    /// This implementation will discard everything.
+    fn demo_impl_discard() -> impl FnMut(StackMessage) -> Vec<StackMessage> {
+        move |_| vec![]
+    }
+
+    #[test]
+    fn test_scenario_1_discard() {
+        let j = judge(scenario_1(), demo_impl_discard());
+        assert!(j.is_ok());
+        let (j, _) = j.unwrap();
+        assert_eq!(j, Judgment::Red("too few effects".to_string()));
+    }
+
+    /// This implementation will say '0' for everything, and will never run out.
+    fn demo_impl_zero() -> impl FnMut(StackMessage) -> Vec<StackMessage> {
+        move |_| vec![Value(Some(0))]
+    }
+
+    #[test]
+    fn test_scenario_1_zero() {
+        let j = judge(scenario_1(), demo_impl_zero());
+        assert!(j.is_ok());
+        let (j, _) = j.unwrap();
+        assert_eq!(j, Judgment::Red("too many effects".to_string()));
+    }
+
+    /// This implementation will remember the stack size, but will report '0' for everything.
+    fn demo_impl_zero_smrat(
+        count: &mut usize,
+    ) -> impl FnMut(StackMessage) -> Vec<StackMessage> + '_ {
+        move |msg| match msg {
+            Push(_) => {
+                *count += 1;
+                vec![]
+            }
+            Pop => {
+                if *count == 0 {
+                    vec![Value(None)]
+                } else {
+                    *count -= 1;
+                    vec![Value(Some(0))]
+                }
+            }
+            Value(_) => panic!("Value in demo_impl"),
+        }
+    }
+
+    #[test]
+    fn test_scenario_1_zero_smrat() {
+        let mut count = 0;
+        let j = judge(scenario_1(), demo_impl_zero_smrat(&mut count));
+        assert!(j.is_ok());
+        let (j, _) = j.unwrap();
+        assert!(matches!(j, Judgment::Red(_)), "not \"Red\": {:?}", j);
+        let j = match j {
+            Judgment::Red(s) => s,
+            _ => unreachable!(),
+        };
+        assert!(
+            j.starts_with("expected"),
+            "not \"expected X, got Y\": {:?}",
+            j
+        );
+    }
+
+    /// This implementation will always report an empty stack
+    fn demo_impl_empty() -> impl FnMut(StackMessage) -> Vec<StackMessage> {
+        move |msg: StackMessage| match msg {
+            Push(_) => vec![],
+            Pop => vec![Value(None)],
+            Value(_) => panic!("Value in demo_impl"),
+        }
+    }
+
+    #[test]
+    fn test_scenario_1_empty() {
+        let j = judge(scenario_1(), demo_impl_empty());
+        assert!(j.is_ok());
+        let (j, _) = j.unwrap();
+        assert_eq!(j, Judgment::Red("falsely reported empty stack".to_string()));
+    }
+
+    /// This implementation will return something irrelevant when popping
+    fn demo_impl_irrelevant() -> impl FnMut(StackMessage) -> Vec<StackMessage> {
+        move |msg: StackMessage| match msg {
+            Push(_) => vec![],
+            Pop => vec![Push(42)],
+            Value(_) => panic!("Value in demo_impl"),
+        }
+    }
+
+    #[test]
+    fn test_scenario_1_irrelevant() {
+        let j = judge(scenario_1(), demo_impl_irrelevant());
+        assert!(j.is_ok());
+        let (j, _) = j.unwrap();
+        assert_eq!(
+            j,
+            Judgment::Red("undefined response from stack".to_string())
+        );
+    }
+
+    /// This scenario contains an implementation bug
+    fn scenario_2() -> StackJudge {
+        #[rustfmt::skip]
+        let sce = vec![
+            Push(1), Pop, Pop
+        ];
+        StackJudge::new_scenario(sce)
+    }
+
+    #[test]
+    fn test_scenario_2() {
+        let mut stack = vec![];
+        let j = judge(scenario_2(), demo_impl_good(&mut stack));
+        assert_eq!(j, Err("bad sim: more pops than pushes".to_string()));
     }
 }
