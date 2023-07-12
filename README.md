@@ -21,14 +21,14 @@ scaffolding effort.
 - Many elaborate approaches: at some point, you get the impression
 that all they care about is selling you their book.
 
-And, when is simulation a better approach?
+### And, when is simulation a better approach?
 
 - When you want to test a design model, not an implementation.
 - You have a proposal to break down a complex system to manageable parts.
 Alright, but are you sure that it's *good* design? How do you know?
 - Well, simulate it and see what happens.
 
-How would simulation be better?
+### Then, *how* would simulation be better?
 
 - Not too expensive: you do have to write code, but you don't have
 to deal with actual I/O or performance. Just define the data types
@@ -44,29 +44,39 @@ your actual implementation. I figured you'd appreciate this if you're
 already working on a big project.
 - Not rigid: most testing suites simply recall a sequence of
 events and check the results. `caet` allows you to define
-a custom `Judge` machine that just traces the events your 
-system-under-test emits and, in response,
-manipulates future states of its environment so as to poke the
-object under test in interesting ways---or just recalling the
-events and checking the results, if that's what you want.
+a custom `Judge` machine that can be as low effort as
+to simply be a unit tester, or as high effort as to be
+a fully autonomous adversarial "god" that will strategically
+try to break your system-under-test. You do have to do this
+yourself.
 You have to write the `Judge` yourself, but it's not hard.
 - Not brittle: it's not about recalling a sequence of events,
-it's checking it using an actual computer program. So, it's
-just about as brittle as you make it. If you spend the effort,
+it's checking it using an actual computer program. So, it depends on you.
+If you spend the effort,
 you'll be rewarded with a robust test suite. If you don't,
-you'll get a fantastic demonstration in just a few dozen minutes
-that you can discuss later.
-- Not a book: I'm not selling any philosophy here. I'm just
+you'll get a fantastic demonstration of what real code
+will look like if you were to actually start writing it
+in under an hour (depending on the complexity, of course).
+- Feedback: you can get feedback on your design model
+in a matter of hours, as I said!
+When I do this simulations thing myself, I'm always surprised how much
+my original design was lacking, and I liked the fast
+feedback cycle so I can actually build something quickly
+in a problem domain I'm completely unfamiliar with.
+Large projects are much less overwhelming than before.
+And, I hope you like it, too.
+- Not a book: I'm not selling any books here. I'm just
 giving you a tool that you can use to test your ideas.
-Ok, there is some philosophy, but it's mostly a paraphrase
-of object-orientation, nothing proprietary.
+Ok, there is some custom philosophy going on, but it's mostly
+a paraphrase of the good-old concept of object-orientation (OO),
+nothing proprietary.
 
 ## Explain to me the philosophy behind it.
 
 `caet` is based on the following principles:
 - **Protocol not algorithm**: We're solving an interactive problem, not a computational problem.
 In other words, we're building bots, not cracking LeetCode.
-- **Breaking down interactions**: We look at any interactive problem in three ways:
+- **Object, Universe, Time**: We look at any interactive problem in three ways:
     - **Object**: this is the system that's being modeled.
     All objects are specialized for each of their universes.
     An object can also be called a thing, entity, agent, whatever.
@@ -88,7 +98,7 @@ their collective actions to changes in the universe, and then
 let each object react to those changes. But if you really want to
 model concurrency and communication, `caet` is not the tool for you,
 though it can be used to prototype such a system, if you hack it.
-- **Object-orientation**: An object may be composed internally of distinct,
+- **Divide and Conquer**: An object may be composed internally of distinct,
 simpler, shorter-lived universes, akin to how the human body is composed
 of multiple distinct cavities, each isolated from the outside,
 where different organs are specialized to rest in.
@@ -97,11 +107,20 @@ object's behavior. This breakdown can be done recursively until the programmer
 decides that a prepared dependency or module can handle it,
 or the universe no longer requires interaction, so it can be
 replaced with an *infallible* function call.
-- **Instantaneity of observation**: The object can "sense" or "observe" things from the universe, and this is cheap.
+- **Lifetimes**: A universe has a lifetime, and it can be born and die.
+Multiple copies of the same type of universe can exist at the same time,
+each inhabited by exactly one object.
+- **Specialization of objects**: An object can be specialized for a type of universe.
+This is why you can't put a liver in stomach acid and hope it'll survive.
+Liver works in the liver universe, and stomach works in the stomach universe.
+- **Observation is passive, instantaneous, and reliable**: The object can "sense" or "observe" things from the universe, and this is cheap.
 In fact, the object can sense anything in the universe reliably and instantaneously,
 but only passively; it can't actively choose what to sense and when
-because that amounts to violating causality.
-- **Reaction**: The object can "act" on the universe, which is neither instantaneous nor reliable.
+because random access amounts to violating causality by reading the future.
+- **Reaction is active but neither instantaneous nor reliable**: Still, the object does have some agency.
+The object can "act" on the universe, which is neither instantaneous nor reliable.
+`caet` tests exactly this part of the object's behavior:
+whether an object's reaction is timely, valid and appropriate.
 An object's action caused by an event is called a reaction.
 - **Causality**: The future can't affect the past. *Causality*, as `caet` understands it, is exactly the same as any of the following (and mutually so):
   - **Encapsulation**: The universe can hide information from the object,
@@ -109,7 +128,7 @@ An object's action caused by an event is called a reaction.
   - **Inherent interactivity**: Some processes may, inherently, be interactive;
   they could also be perhaps, but not necessarily, adversarial.
   - **State**: Both the universe and the object have *state*, which is not
-  only about keeping information, but also, about time sensitivity.
+  only about keeping information but, also, about being sensitive to time.
 
 The last bit can be a bit surprising. But, yes, all four concepts are
 the same thing, one single concept.
@@ -117,7 +136,7 @@ the same thing, one single concept.
 ## How do I use it?
 
 First, this is more like a prototyping tool than an actual testing tool.
-Or, this is a tool to *test* (validate) your ideas before you actually
+Or, this is a tool to "test" (validate) your ideas before you actually
 write code. So, keep that in mind.
 
 Also, this is a Rust crate, so you need to know Rust to use it.
