@@ -1,117 +1,69 @@
 //! A judge for cause-effect systems.
 //!
-//! A cause-effect system is a system that takes in a cause (input) and produces an effect (output).
-//! The judge is a test driver for the system.
+//! This crate allows you to simulate an external environment that interacts with your object
+//! OO system prototype. This is useful for validating your OO design.
 //!
-//! According to this crate's worldview, an interactive system is composed of three parts:
-//! 1. A **universe**: set of all sensory experiences (observations) that the system can perceive,
-//! the set of all reactions that the system can produce, and any constraints on the evolution of
-//! the system.
-//! 2. An **object** (entity, subject, thing, etc.): the only designated "thing" in the universe,
-//! and that which is the system under test.
-//! 3. **Time**: Encompasses the notion of causality, and perhaps more. Only a broad and
-//! ambiguous notion of causality is used here.
+//! ## How does it help me?
 //!
-//! As time progresses, the object perceives the universe and reacts to it, which
-//! then destructively changes the universe. The object will then perceive the new universe,
-//! and react to it, and so on.
+//! Writing a simulation implies writing code, but not *real* code that interacts
+//! with the actual system (and that would burden you with the details of the system's
+//! implementation), but *fake* code that interacts with a *fake* system that you
+//! have designed to be as close to the real system as necessary.
 //!
-//! ## What's important to know about the *universe*?
+//! So, after analyzing your problem, and applying certain design patterns to
+//! plan what code you will write, you can use this crate to test your idea by writing
+//! lightweight, throwaway, fake code that interacts with your fake system.
 //!
-//! In this worldview, there's some peculiar refinements to the notion of a *universe*.
-//! Let me list some of them here:
-//! 1. Exactly one being exists in the universe: the object. Hence, the object is
-//! not aware of its relationships with any other objects, because they're in
-//! parallel universes.
-//! 2. The universe is defined by the object's perceptions of it. Only the immediate
-//! surroundings, and only those as understood by the object, are relevant.
-//! However, the judge can manipulate the universe to test the object's reactions.
+//! Unlike real code, it's only supposed to take you one or two hours to flesh out
+//! an entire system. And, unlike real code, you can keep it as long as you'd like
+//! without worrying about keeping up with the changes in the real system.
 //!
-//! ## Recursive division of a universe
+//! ### Use cases
 //!
-//! If a programmer decides the language of the universe is too complicated, or
-//! if there is incomplete information (synonymous with the requirement for interaction)
-//! that must be factored in the problem statement, then the **object** (not the universe)
-//! can be divided into multiple sub-universes, and each sub-universe will contain
-//! exactly one object. This is done until either:
-//! - The problem can be outsourced to a dependency, or
-//! - Both: the language is simple enough AND there is complete information (no interaction)
-//! to perfectly predict or produce the object's reactions.
-//! In the latter case, the object is no longer a cause-effect system and more
-//! like a computational job like a function call.
+//! - Discussion and reflection: You can use this crate to discuss or document your design.
+//! - Prototyping: You can use this crate to prototype your design.
+//! - Validation: You can use this crate to validate your design.
+//! - Mocking: You can use this crate to mock your design. However,
+//! you'll also be mocking your implementation, which may or may not be what you want.
 //!
-//! The image of dividing the "guts" of an object into multiple types of universes resembles
-//! the way the human body is organized.
+//! ### Benefits Profile
 //!
-//! See how the brain is in its own space that's separated from the blood flow
-//! (through a blood-brain barrier), and the lungs exist in their own peculiar environment
-//! that allows the presence of air, and the stomach is in its own environment that
-//! is acidic, and so on. And yet all of them are also different from the outside
-//! world.
+//! This crate satisfies this niche:
 //!
-//! The brain will simply melt away in the stomach, and the lungs will simply
-//! collapse in the cranial cavity. They are smaller objects that are specialized to
-//! their own environments and that understand only changes in their own environments.
+//! **Moderate accuracy, moderate cost**: You do need to write code, mostly throwaway
+//! code at that, so this is more expensive than validating your idea on paper,
+//! but it's much cheaper than writing real code.
 //!
-//! The human body somehow maintains distinct environments that are specialized for
-//! and mutually incompatible with every organ. When the human senses something,
-//! and decides to engage in an action, the human body changes these respective
-//! environments and lets the organs naturally react to the changes. The human
-//! body then compiles those reactions into a single reaction that is then
-//! sent to the outside world.
+//! It's often believed that the only way to accurately gauge the quality of a design
+//! is to write real code. As they say: you can't know until you try.
+//! **No!** This crate is the counterexample to that belief.
+//! Save yourself the time and effort of getting stuck with the wrong design,
+//! or the pressure to turn your flimsy prototype (with tons of anomalies) as the real thing.
 //!
-//! ## Is this some peculiar philosophy?
+//! What this crate offers you: write a little code about a little part of your system,
+//! and implement a universe that is limited, fair, hostile to your object.
+//! See if your object keeps up with the universe. Also, try to get a feel for
+//! what it's like to actually turn your architecture into code.
 //!
-//! No, it's called **object-orientation** (OO).
+//! Was it too verbose? Was it too complicated? Did it introduce a fundamental
+//! anomaly in your system? Did you miss something important?
+//! Did you lose flexibility? Did you gain flexibility?
+//! What did you feel after getting a taste of your design? Did you like it?
 //!
-//! It's about using divide and conquer for interactive systems, and not
-//! just algorithms.
-//!
-//! This crate, which tests any general cause-effect system, is originally
-//! designed to test and prototype OO systems, even before
-//! anything has been written in a programming language.
-//!
-//! OO design is important, but getting it right from the start is hard.
-//! The scale of systems in which OO design is important also tends to be
-//! the larger ones, where the cost of getting it wrong is also high.
-//!
-//! **That's why this crate exists: It allows you to validate your breakdown.**
-//! It allows you to validate each subsystem in your OO design
-//! so you can make an accurate judgment about whether your breakdown
-//! is actually helping the problem or rather making it worse
-//! without connecting it to a real codebase or a real system, and all the while
-//! avoiding the rigidity of unit tests.
-//!
-//! This simulation idea is also useful for **simply getting started in
-//! an unfamiliar domain**. It's a way to get your feet wet without
-//! committing to a particular design.
-//!
-//! ## When to use this crate to test your OO system or prototype
-//!
-//! Remember the divide and conquer idea?
-//!
-//! The object is subdivided into simpler universes that span shorter time periods.
-//! This division is done until the universe is both simple to describe
-//! and requires no interaction (due to being so short-lived).
-//!
-//! In your OO design, it's important to prototype different subuniverses
-//! and subobjects, and to test them in isolation.
-//!
-//! It's often quickest to test the idea on paper first, but your cost-benefit
-//! analysis may be inaccurate. Diving straight into code is, of course,
-//! the most expensive option, while being the most accurate.
-//!
-//! This crate is the middle ground between the two extremes. It allows you
-//! to test out your OO analysis **without writing too much code.**
-//!
-//! It's just a simulation, anyway. Don't bother with async, threads, or
-//! any other fancy stuff. Using this crate requires that you focus on
-//! expressing the most important ideas into code. Namely,
-//! - How you choose to represent sensory experiences (observations) and reactions
-//! as data types, and
-//! - The way your object reacts to the simulated universe.
+//! You can answer these questions without writing real code, plus, discuss and document
+//! your assumptions about the universe and the object's responsibilities.
 //!
 //! ## How to use this crate to test your OO system or prototype
+//!
+//! First, there's a full example right here on this page. You might have to scroll
+//! to the bottom of the page to see it.
+//!
+//! And, there's also a more elaborate example in the `lib.rs` file of this crate.
+//! It's called `mod test_stack`. It's much bigger than the example on this page,
+//! but also comprehensive. It's a simulation of a stack data structure.
+//! Look at the example and see if `caet` is a good fit for you.
+//!
+//! Now, let's get to the details.
 //!
 //! This crate has exactly three public types:
 //! - trait [`Judge`]: A god-like entity that controls the universe and judges the object's reactions.
@@ -119,18 +71,29 @@
 //! - struct [`Judgment`]: A judgment about an object's reaction evaluated at a particular time.
 //! Also contains the next input to the object.
 //!
-//! Needless to say, but, the structs have a fixed implementation.
+//! Your job is to implement the trait [`Judge`].
 //!
-//! Your job is to implement the trait [`Judge`] and its three associated types.
+//! And, essentially, one public function:
+//! - [`judge`]: The entry point into this crate. This is a test runner.
+//! It takes the ownership of your judge implementation and your object,
+//! and runs the simulation. Once it's finished, it returns an [`Outcome`].
 //!
-//! And, two public functions (essentially one, though):
-//! - [`judge`]: Run a test.
-//! - [`judge_panic`]: Run a test, but panic and report if the object's reaction is unacceptable,
-//! or if the judge hits some sort of an error of its own.
-//! So, essentially, a wrapper around [`judge`].
+//! So, it's actually pretty simple. You implement the trait [`Judge`],
+//! you implement your object, then you test it by calling [`judge`].
+//! That's it.
 //!
-//! The [`judge`] function call is your entry point into this crate.
-//! More on that later.
+//! ### First, a synopsis.
+//!
+//! The `caet` crate is a flexible testing system.
+//!
+//! Any judge and any object can work together as long as they agree on one thing:
+//! the "change" data type.
+//!
+//! The "change" data type is the type of the object's sensory experiences and reactions.
+//! In other words, it really defines (the alphabet of) the language of the universe.
+//!
+//! That means, anyone that speaks the same language (i.e. uses the same "change" data type)
+//! can work together.
 //!
 //! ### [`Judge`]
 //!
@@ -138,31 +101,48 @@
 //!
 //! There are three associated types you must implement:
 //! - **`Change`**: A combined observation and reaction type.
-//! - **`Fault`**: In case a reaction is unacceptable, this type is used to report the reason.
+//! - `Fault`: In case a reaction is unacceptable, this type is used to report the reason.
 //! - `Error`: A judge can also hit an error, in which case this type is used to report the reason.
 //!
-//! The first two are the most important. Let's see why:
-//! - **`Change`**: You must abstract away the object's sensory experiences and reactions
-//! by stripping out the details that are irrelevant to the problem at hand.
-//! - **`Fault`**: You must explain what it means for a reaction to be unacceptable.
+//! Though you should define all three, only the first one (`Change`) is relevant to the OO design.
 //!
-//! The third type (`Error`) can be whatever. It's a simulation error, an implementation detail,
-//! and not relevant to the OO design.
+//! The second and third types are essentially for error handling. It's not super important.
+//! You can make them `String` if you want.
 //!
-//! Lastly, you must implement the trait method [`Judge::next`].
+//! Then, you must implement the trait method [`Judge::next`].
 //!
-//! This method is called by the [`judge`] function to get the next input to the object
-//! based on an ordered list of reactions that the object has produced so far.
+//! Before we discuss [`Judge::next`], you should think of the simulation as some sort of game or battle.
 //!
-//! Check out the module `test_stack` in the source code for an example.
+//! The "god" (i.e. the judge) controls the universe and the object.
+//! The judge's goal is to defeat the object by making it hit a fault
+//! (a rule-breaking or otherwise inappropriate reaction).
+//! Meanwhile, the object's goal is to survive the universe by not hitting a fault,
+//! and continue until it outsmarts the judge (i.e., ends the simulation).
+//! (Of course, you control both, so you can make them as boring or as interesting as you want.)
 //!
-//! In said example, a `StackJudge` type is implemented. It has a constructor
-//! that accepts the variations on the test case. Each instance of `StackJudge`
-//! will simulate a different universe, which are, however, all described by the same laws.
+//! So, the [`Judge::next`] method should be thought of as the judge's next move.
+//!
+//! Namely, it will read all the reactions of the object that hasn't been judged yet,
+//! and then it will decide what to do next.
+//!
+//! The judge controls the lifetime of the universe. It can end the simulation at any time.
+//! The judge is also responsible for judging the object's reactions.
+//! Both of these responsibilities are combined in the return value of [`Judge::next`]:
+//! - If the judge decides the reaction is acceptable and still has a challenge for the object,
+//! it will return `Ok(Judgment::Continue(next_input))` with whatever the `next_input` is.
+//! - If the judge decides the reaction is acceptable but has no more challenges for the object,
+//! it will return `Ok(Judgment::Done)` to end the simulation.
+//! - Lastly, if the judge decides the reaction is unacceptable, it will return
+//! `Err(Judgment::Halt(fault))` with whatever the `fault` is. This also ends the simulation.
+//!
+//! In [`Judge::next`], you'll be implementing the judge's decision-making process.
+//!
+//! Actually, this single method is the only thing you need to implement, and
+//! it conceptually defines the judge's identity and the rules of the universe.
 //!
 //! ### Your object
 //!
-//! The definition of an object is any thing that reacts to changes in its environment.
+//! The definition of an object is any *thing* that reacts to changes in its environment.
 //!
 //! Because the "thing" concept is so general, it would be unreasonable to require
 //! you to define it as some sort of a concrete data type. Instead, in this crate,
@@ -172,40 +152,38 @@
 //! `FnMut(J::Change) -> Vec<J::Change>` where `J` is your implementation of [`Judge`].
 //! This closure is your object's reaction function, and, therefore, its representation.
 //!
-//! Let's break it down. It's a lasting closure with its own private state
-//! (hence the `FnMut` trait bound) that reacts to a change in the universe
-//! and produces its own changes in the universe---maybe silence, maybe a single change,
-//! or perhaps multiple changes (ordered from index 0 at the earliest to the latest).
+//! Let's break this down.
 //!
-//! So the "object" is kind of abstract, hidden behind the `FnMut` bound,
-//! and the concept of either "method call" ("observation") and "return value" ("reaction")
-//! are also abstract, hidden behind your provided `Change` type together.
-//! So, the `Change` type is kind of a conflation of the two concepts.
+//! - `FnMut`: The object has private state that it can mutate, which it persists
+//! while it is called multiple times.
+//! - `(J::Change)`: It makes a passive observation of the universe, though it is
+//! actually given by the judge.
+//! - `-> Vec<J::Change>`: It reacts to the observation by producing a vector of changes.
+//! It's a vector because it can produce multiple changes at once, or none at all.
+//! Pay close attention to the doctrine of non-immediacy of reactions: This doctrine
+//! says that, unlike observations, reactions are not immediate. In other words,
+//! it's possible for the object to bunch up its reactions and produce them all at once
+//! as a way to defeat the judge. The judge should generally agree that this is a valid strategy.
+//! Otherwise, the judge is at fault. (But of course, this is up to how you implement your judge.
+//! I only strongly recommend that you follow this doctrine.)
 //!
-//! In the example given as `test_stack`, the universe gives the object (a stack data structure)
-//! a command to either push or pop a value. The object is then supposed to
-//! produce a "value" reaction, which provides what was at the top of the stack
-//! for each pop.
+//! So in summary, the "object" is abstracted away, hidden behind the `FnMut` closure.
+//! The `caet` crate will never ever touch it directly. Instead, you will be providing
+//! a closure that stands in for your object.
 //!
-//! If the object produces a "push"
-//! or "pop" reaction back at the world, which is clearly absurd and confused,
-//! the judge will report a fault. The object, likewise, will panic if the
-//! universe gives a "value" (stack's value) reaction, which is only meant
-//! to be produced by the object itself, because that's absurd. So that's
-//! the way the example deals with the conflated "observation" and "method call"
-//! concepts.
+//! In more conventional OOP terms, the closure is a proxy, translating each "command"
+//! (or event) to your real object, and then translating each "response" (or reaction)
+//! back to the judge.
 //!
-//! (There's a minor difference between them, that is, a judge will merely
-//! report a fault while the object will panic. This is because the judge
-//! is meant to be a god-like entity that can't be *wrong*---though it can
-//! certainly be *adversarial*---while the object
-//! is a mere mortal that can be wrong. But this is a minor detail.)
+//! But, your proxy can actually get a bit smarter than the underlying object,
+//! by bunching up reactions and releasing them all at once perhaps in unpredictable ways.
+//! May be it will even re-order the reactions. The precise rules for what's valid
+//! and invalid, and how synchronization is done,
+//! should be agreed upon between the judge and the object.
 //!
-//! So, just implement a dynamic dispatch kind of thing that decodes
-//! the `Change` type (think of it as a message or signal) and produces
-//! some answer (also the same `Change`) type.
+//! However, the doctrine of the non-immediacy of reactions is a good starting point.
 //!
-//! ### [`judge`]
+//! ### [`judge`] (lowercase)
 //!
 //! The function [`judge`] takes in exactly two arguments:
 //! - **`judge`**: Your implementation of [`Judge`].
@@ -229,7 +207,8 @@
 //!
 //! The source code provides a more detailed example in the module `test_stack`.
 //!
-//! Here, let's do a much simpler, but also less complete, example.
+//! But, here, let's do a much simpler one that concisely demonstrates the
+//! basic idea of the crate.
 //!
 //! We model an agent that plays the guessing game.
 //!
@@ -292,6 +271,20 @@
 //!                 ))),
 //!             }
 //!         }
+//!
+//!         // In reality, according to the doctrine of non-immediacy of reactions,
+//!         // the object can bunch up its reactions and produce them all at once,
+//!         // which is, by the doctrine, a valid strategy. If I followed this
+//!         // doctrine, then this judge is actually incorrect, because it's
+//!         // expecting the object to react immediately. But, I'm not following
+//!         // the doctrine for the sake of simplicity.
+//!
+//!         // (Of course, the doctrine does allow for the possibility of adding
+//!         // synchronization primitives to the universe, after which
+//!         // the object *must* react "soon," or the judge will keep waiting
+//!         // until it's waited "too long" and fails the object. But that's
+//!         // not relevant here.)
+//!
 //!         Ok(Judgment::Halt(format!("You can't just pass a turn.")))
 //!     }
 //! }
@@ -300,7 +293,8 @@
 //! let mut lower_bound = -1000;
 //! let mut upper_bound = 1000;
 //! let mut guess = 0;
-//! let mut object = |observation| {
+//! // (Proxy for my object)
+//! let mut proxy = |observation| {
 //!     println!("I sensed: {observation:?}");
 //!     match observation {
 //!         Start => {
@@ -324,7 +318,7 @@
 //! // Test
 //! let outcome: Outcome<MyJudge> = judge(
 //!     MyJudge { count: 0, target: 42, begun: false },
-//!     &mut object
+//!     &mut proxy,
 //! ).unwrap();
 //! assert_eq!(outcome.judgment, Judgment::Done);
 //! println!("It took {} guesses.", outcome.calls);
