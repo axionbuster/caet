@@ -6,6 +6,7 @@ description = "Cause-and-effect tester; help prototype a system before writing r
 license = "MIT OR Apache-2.0"
 categories = ["development-tools", "simulation", "no-std"]
 repository = "https://github.com/axionbuster/caet_proto1"
+exclude = [".vscode"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
