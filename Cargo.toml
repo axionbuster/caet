@@ -2,6 +2,10 @@
 name = "caet"
 version = "0.1.0"
 edition = "2021"
+description = "Cause-and-effect tester; help prototype a system before writing real code."
+license = "MIT OR Apache-2.0"
+categories = ["development-tools", "simulation", "no-std"]
+repository = "https://github.com/axionbuster/caet_proto1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

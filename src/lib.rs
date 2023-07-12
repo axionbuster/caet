@@ -420,6 +420,14 @@
 //! println!("It took {} guesses.", outcome.calls);
 //! ```
 
+#![deny(missing_docs)]
+#![cfg_attr(not(test), no_std)]
+
+extern crate alloc;
+
+use alloc::vec;
+use alloc::vec::Vec;
+
 /// A judgment of a cause-effect system.
 ///
 /// - Did the subject produce an acceptable reaction?
@@ -510,7 +518,7 @@ pub fn judge<J>(
 where
     J: Judge,
 {
-    use std::mem;
+    use core::mem;
     let mut out = vec![];
     let mut ite = 0;
     loop {
