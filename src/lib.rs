@@ -224,6 +224,111 @@
 //! it to prematurely halt the test. That's why the [`Outcome`]
 //! type has a iteration count field. Check that field to see
 //! if it's way too low.
+//!
+//! ## Example
+//!
+//! The source code provides a more detailed example in the module `test_stack`.
+//!
+//! Here, let's do a much simpler, but also less complete, example.
+//!
+//! We model an agent that plays the guessing game.
+//!
+//! The range of possible numbers is -1000 to 1000, and the agent
+//! must guess the correct number within 10 guesses.
+//!
+//! ```
+//! use caet::{judge, Judge, Judgment, Outcome};
+//! use std::convert::Infallible;
+//!
+//! /// Universe
+//! #[derive(Debug, PartialEq)]
+//! enum GuessIs {
+//!     Start, // The initial call to `next` is always with an empty vector
+//!     TooLow, // Judge: The agent's guess was too low
+//!     TooHigh, // Judge: The agent's guess was too high
+//!     Value(i32), // Agent: Here's my guess
+//! }
+//! use GuessIs::*;
+//!
+//! /// Judge
+//! struct MyJudge {
+//!     count: u32,
+//!     target: i32,
+//!     begun: bool,
+//! }
+//! impl Judge for MyJudge {
+//!     type Change = GuessIs; // All changes in the universe
+//!     type Fault = String; // What it means for a reaction to be unacceptable
+//!     type Error = Infallible; // What it means for the judge to fail
+//!     /// Get object's reactions, judge them,
+//!     /// and, if acceptable, return the next input or stop.
+//!     fn next(&mut self, reactions: Vec<GuessIs>) -> Result<Judgment<GuessIs, String>, Infallible> {
+//!         // The initial call to `next` is always with an empty vector, given by the `judge`
+//!         // procedure itself, so prepare for that.
+//!         if !self.begun {
+//!             self.begun = true;
+//!             return Ok(Judgment::Continue(Start));
+//!         }
+//!
+//!         // Now, all subsequent calls to `next` has a vector that was created by the object.
+//!
+//!         // Ignore earlier reactions, if many
+//!         println!("reactions: {:?}", reactions);
+//!         if let Some(reaction) = reactions.last() {
+//!             self.count += 1;
+//!             if self.count > 10 {
+//!                 // Unacceptable: Too many guesses
+//!                 return Ok(Judgment::Halt(format!("It was {}.", self.target)));
+//!             }
+//!             match reaction {
+//!                 // Acceptable: Legitimate actions by the agent
+//!                 Value(n) if *n == self.target => return Ok(Judgment::Done),
+//!                 Value(n) if *n < self.target => return Ok(Judgment::Continue(TooLow)),
+//!                 Value(n) if *n > self.target => return Ok(Judgment::Continue(TooHigh)),
+//!                 // Unacceptable: Faulty implementation of the agent
+//!                 _ => return Ok(Judgment::Halt(
+//!                     format!("Invalid reaction type for agent: {:?}",
+//!                     reaction
+//!                 ))),
+//!             }
+//!         }
+//!         Ok(Judgment::Halt(format!("You can't just pass a turn.")))
+//!     }
+//! }
+//!
+//! // My object (bisect)
+//! let mut lower_bound = -1000;
+//! let mut upper_bound = 1000;
+//! let mut guess = 0;
+//! let mut object = |observation| {
+//!     println!("I sensed: {observation:?}");
+//!     match observation {
+//!         Start => {
+//!             guess = (lower_bound + upper_bound) / 2;
+//!             vec![Value(guess)]
+//!         }
+//!         TooLow => {
+//!             lower_bound = guess;
+//!             guess = (lower_bound + upper_bound) / 2;
+//!             vec![Value(guess)]
+//!         }
+//!         TooHigh => {
+//!             upper_bound = guess;
+//!             guess = (lower_bound + upper_bound) / 2;
+//!             vec![Value(guess)]
+//!         }
+//!         Value(_) => panic!("You're not supposed to guess!"),
+//!     }
+//! };
+//!
+//! // Test
+//! let outcome: Outcome<MyJudge> = judge(
+//!     MyJudge { count: 0, target: 42, begun: false },
+//!     &mut object
+//! ).unwrap();
+//! assert_eq!(outcome.judgment, Judgment::Done);
+//! println!("It took {} guesses.", outcome.calls);
+//! ```
 
 /// A judgment of a cause-effect system.
 ///
@@ -269,6 +374,10 @@ pub trait Judge {
     /// on success; otherwise, it should return [`Judgment::Halt`] on failure.
     ///
     /// (A faulty judge may also return [`Judgment::Continue`]. This is considered a judge fault.)
+    ///
+    /// ## Starting with silence
+    ///
+    /// When the [`judge`] routine starts, it calls this method with an empty vector.
     ///
     /// See: [`judge`], [`Judgment`], [`Outcome`].
     fn next(
