@@ -452,13 +452,13 @@ where
 
 /// Like [`judge`], but panic on any error, either due to the judge
 /// or the task.
-pub fn judge_panic<J>(j: J, task: impl FnMut(J::Change) -> Vec<J::Change>) -> usize
+pub fn judge_panic<J>(j: J, object: impl FnMut(J::Change) -> Vec<J::Change>) -> usize
 where
     J: Judge,
     J::Error: core::fmt::Display,
     J::Fault: core::fmt::Display,
 {
-    match judge(j, task).map(|o| o.decompose()) {
+    match judge(j, object).map(|o| o.decompose()) {
         Ok((Judgment::Done, count)) => count,
         Ok((Judgment::Halt(why), count)) => {
             panic!("subject fault (iter count: {count}): {why}")
