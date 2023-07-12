@@ -108,7 +108,7 @@ decides that a prepared dependency or module can handle it,
 or the universe no longer requires interaction, so it can be
 replaced with an *infallible* function call.
 - **Lifetimes**: A universe has a lifetime, and it can be born and die.
-Multiple copies of the same type of universe can exist at the same time,
+Independent instances of the same type of universe can exist at the same time,
 each inhabited by exactly one object.
 - **Specialization of objects**: An object can be specialized for a type of universe.
 This is why you can't put a liver in stomach acid and hope it'll survive.
