@@ -41,8 +41,8 @@
 //! or the pressure to turn your flimsy prototype (with tons of anomalies) as the real thing.
 //!
 //! What this crate offers you: write a little code about a little part of your system,
-//! and implement a universe that is limited, fair, hostile to your object.
-//! See if your object keeps up with the universe. Also, try to get a feel for
+//! test your system using a strategic "god" (judge) that controls the universe.
+//! Then, see if your object keeps up with the universe. Also, try to get a feel for
 //! what it's like to actually turn your architecture into code.
 //!
 //! Was it too verbose? Was it too complicated? Did it introduce a fundamental
@@ -67,9 +67,9 @@
 //!
 //! This crate has exactly three public types:
 //! - trait [`Judge`]: A god-like entity that controls the universe and judges the object's reactions.
-//! - struct [`Outcome`]: The final result of a test.
-//! - struct [`Judgment`]: A judgment about an object's reaction evaluated at a particular time.
+//! - enum [`Judgment`]: A judgment about an object's reaction evaluated at a particular time.
 //! Also contains the next input to the object.
+//! - struct [`Outcome`]: The final result of a test.
 //!
 //! Your job is to implement the trait [`Judge`].
 //!
@@ -100,7 +100,7 @@
 //! Start by implementing the trait [`Judge`].
 //!
 //! There are three associated types you must implement:
-//! - **`Change`**: A combined observation and reaction type.
+//! - **`Change`: A combined observation and reaction type.**
 //! - `Fault`: In case a reaction is unacceptable, this type is used to report the reason.
 //! - `Error`: A judge can also hit an error, in which case this type is used to report the reason.
 //!
@@ -133,7 +133,7 @@
 //! - If the judge decides the reaction is acceptable but has no more challenges for the object,
 //! it will return `Ok(Judgment::Done)` to end the simulation.
 //! - Lastly, if the judge decides the reaction is unacceptable, it will return
-//! `Err(Judgment::Halt(fault))` with whatever the `fault` is. This also ends the simulation.
+//! `Err(Judgment::Fault(fault))` with whatever the `fault` is. This also ends the simulation.
 //!
 //! In [`Judge::next`], you'll be implementing the judge's decision-making process.
 //!
@@ -171,17 +171,22 @@
 //! The `caet` crate will never ever touch it directly. Instead, you will be providing
 //! a closure that stands in for your object.
 //!
-//! In more conventional OOP terms, the closure is a proxy, translating each "command"
-//! (or event) to your real object, and then translating each "response" (or reaction)
+//! In more conventional OOP terms, the closure is a proxy, translating each "request"
+//! (or command or event) to your real object, and then translating each "response" (or reaction)
 //! back to the judge.
 //!
 //! But, your proxy can actually get a bit smarter than the underlying object,
 //! by bunching up reactions and releasing them all at once perhaps in unpredictable ways.
-//! May be it will even re-order the reactions. The precise rules for what's valid
-//! and invalid, and how synchronization is done,
-//! should be agreed upon between the judge and the object.
+//! Maybe it will even drop or mutate certain reactions and re-order the reactions.
+//! The precise rules for what's allowed and not, and how synchronization is done,
+//! should be agreed upon between the judge and the object. This means, it's your job
+//! to define how reliable your object's reactions are, whether they are immediate or not,
+//! and, in general, how time is understood in your universe.
 //!
-//! However, the doctrine of the non-immediacy of reactions is a good starting point.
+//! However, the doctrine of the non-immediacy of reactions,
+//! and that of the non-reliability of reactions, can provide a good starting point.
+//!
+//! (But none of the examples given respect them fully. But, they are just examples, anyway.)
 //!
 //! ### [`judge`] (lowercase)
 //!
@@ -203,6 +208,87 @@
 //! type has a iteration count field. Check that field to see
 //! if it's way too low.
 //!
+//! ## Some doctrines that may help
+//!
+//! Let's first refine the concepts of observations and reactions.
+//! They are primitive notions so they can't really be *defined*, but
+//! at least, we can say what they are not.
+//!
+//! ### Observations
+//!
+//! - **Passive**: The object senses things passively. It can't
+//! choose to sense something or not, neither can it arrange
+//! some signal to arrive at a certain time. In `caet`, this effect
+//! is achieved by letting the judge control all sensations (observations)
+//! felt by the object.
+//! - **Immediate**: The object's observations are immediate. They are
+//! always up-to-date. This also means they always arrive in order.
+//! In fact, a "delayed sensation" (or observation) is a contradiction
+//! in terms; like a triangle with four corners, it cannot even be imagined.
+//! - **Reliable**: Similarly, all observations "felt" by the object are reliable.
+//! Again, this is by definition of the very term "observation."
+//! Implementation-wise, this means `caet` cannot drop or mutate observations sent by the judge.
+//!
+//! ### Reactions
+//!
+//! - **Active**: The object has total and unimpeachable agency over its reactions.
+//! Of course, some actions can be disallowed by the judge, but in any case,
+//! the object will always be looking out for its own interests.
+//! - **Non-immediate**: In the real world, reactions are not immediate.
+//! They can also be re-ordered.
+//! - **Non-reliable**: Similarly, reactions are not reliable. They can be dropped
+//! or mutated.
+//!
+//! However, `caet` doesn't enforce the non-immediacy and non-reliability doctrines,
+//! meaning, a judge implementation may actually demand immediate and reliable reactions.
+//!
+//! When implementing these doctrines, you do this by letting the reaction function,
+//! which is a proxy for your object, control the way reactions are sent over the
+//! `Vec<J::Change>` vector. For example, you can bunch up reactions and release them
+//! all at once, or you can drop or mutate certain reactions, or you can re-order them.
+//!
+//! The judge will not know about this, and will only see what's sent over the "wire"
+//! (the vector). It's up to you to make sure the judge understands your object's
+//! reaction strategy.
+//!
+//! ### The doctrine of immediacy of observations
+//!
+//! The object's observations are immediate. They are always up-to-date.
+//! This also means they always arrive in order.
+//!
+//! This is a non-negotiable doctrine. `caet` enforces it.
+//!
+//! ### The doctrine of reliability of observations
+//!
+//! Similarly, all observations "felt" by the object are reliable.
+//! This means `caet` cannot drop or mutate observations sent from the judge.
+//!
+//! Again, this is a non-negotiable doctrine. `caet` also enforces it.
+//!
+//! ### The optional doctrine of non-immediacy of reactions
+//!
+//! The object's reactions are not immediate. They can be bunched up and
+//! released all at once. This is a valid strategy, and the judge should
+//! agree to it. Otherwise, the judge is at fault.
+//!
+//! Philosophically, this is an absolute one, but `caet` doesn't
+//! rely on it. It's really up to your judge implementation to either
+//! expect immediate reactions or not.
+//!
+//! What this means is: `caet` doesn't inspect the vector of reactions
+//! returned by the object. It just passes it along to the judge.
+//! But you can definitely simulate the non-immediacy by
+//! buffering the reactions in your implementation of the reaction function.
+//!
+//! ### The optional doctrine of non-reliability of reactions
+//!
+//! The object's reactions are not reliable. They can be dropped or mutated.
+//! This is a valid strategy, and the judge should agree to it. Otherwise,
+//! the judge is at fault.
+//!
+//! Again, you can say yes or no to this doctrine. `caet` doesn't touch
+//! anything, so it's up to you.
+//!
 //! ## Example
 //!
 //! The source code provides a more detailed example in the module `test_stack`.
@@ -214,6 +300,16 @@
 //!
 //! The range of possible numbers is -1000 to 1000, and the agent
 //! must guess the correct number within 10 guesses.
+//!
+//! In this code,
+//! 1. We define the universe.
+//! 2. We define the judge. (see [`Judge`])
+//! 3. We define the object.
+//! 4. We test the object with the judge. (see [`judge`])
+//!
+//! In four steps, we have a working simulation.
+//! Now, I can be very sure of the pros and cons (not shown) of my architecture,
+//! making me more confident in my design decisions.
 //!
 //! ```
 //! use caet::{judge, Judge, Judgment, Outcome};
@@ -257,7 +353,7 @@
 //!             self.count += 1;
 //!             if self.count > 10 {
 //!                 // Unacceptable: Too many guesses
-//!                 return Ok(Judgment::Halt(format!("It was {}.", self.target)));
+//!                 return Ok(Judgment::Fault(format!("It was {}.", self.target)));
 //!             }
 //!             match reaction {
 //!                 // Acceptable: Legitimate actions by the agent
@@ -265,7 +361,7 @@
 //!                 Value(n) if *n < self.target => return Ok(Judgment::Continue(TooLow)),
 //!                 Value(n) if *n > self.target => return Ok(Judgment::Continue(TooHigh)),
 //!                 // Unacceptable: Faulty implementation of the agent
-//!                 _ => return Ok(Judgment::Halt(
+//!                 _ => return Ok(Judgment::Fault(
 //!                     format!("Invalid reaction type for agent: {:?}",
 //!                     reaction
 //!                 ))),
@@ -285,7 +381,7 @@
 //!         // until it's waited "too long" and fails the object. But that's
 //!         // not relevant here.)
 //!
-//!         Ok(Judgment::Halt(format!("You can't just pass a turn.")))
+//!         Ok(Judgment::Fault(format!("You can't just pass a turn.")))
 //!     }
 //! }
 //!
@@ -333,45 +429,36 @@ pub enum Judgment<M, S> {
     /// Acceptable; continue with this input.
     Continue(M),
     /// Unacceptable (with a reason); terminate the program.
-    Halt(S),
+    Fault(S),
     /// Acceptable; finished testing.
     Done,
 }
 
 /// A judge for a cause-effect system.
 ///
-/// - maintain a virtual "universe" (surroundings) in a language understood by the subject,
-/// - define said universe (see `Observation` assoc. type), and
-/// - judge the subject's reactions to the universe (see [`Judgment`]; `Fault` assoc. type), while
-/// - controlling what the subject senses (observes) about that universe.
-///
-/// (It can sound peculiar that the *judge is in control of the subject's senses*,
-/// but this is done to allow simplifying the language of
-/// the universe by essentially boiling it down to what the subject can understand.
-/// Think of the famous "brain in a vat" thought experiment.)
+/// - Keep an internal state representing the universe, and evolve it.
+/// - Read, judge and apply the reactions produced by the subject.
+/// - Produce the next observation to send to the subject.
 ///
 /// See also: [`judge`].
 pub trait Judge {
-    /// Explain why the subject is at fault.
-    type Fault;
     /// Express an observation about the universe (surroundings) made by the subject
     /// or a reaction produced by the subject.
     type Change;
+    /// Explain why the subject is at fault.
+    type Fault;
     /// Any internal error type.
     type Error;
-    /// Given the ordered (earliest to latest in `0..n`) reactions produced by the subject
-    /// thus far since the last call...
-    /// - Decide whether the response is acceptable.
-    /// - Decide whether to continue or halt the program.
-    /// - If continuing, produce the next observation to send to the subject.
-    /// Once the judge decides to halt the program, it should return [`Judgment::Done`]
-    /// on success; otherwise, it should return [`Judgment::Halt`] on failure.
-    ///
-    /// (A faulty judge may also return [`Judgment::Continue`]. This is considered a judge fault.)
+    /// Get object's reactions (ordered by time), judge them,
+    /// and, if acceptable, return the next input or stop;
+    /// otherwise, stop with a reason.
     ///
     /// ## Starting with silence
     ///
     /// When the [`judge`] routine starts, it calls this method with an empty vector.
+    /// This vector is not produced by the subject, but by the [`judge`] routine itself.
+    ///
+    /// All subsequent calls to this method will have a vector that was produced by the subject.
     ///
     /// See: [`judge`], [`Judgment`], [`Outcome`].
     fn next(
@@ -389,7 +476,7 @@ pub struct Outcome<J: Judge> {
     ///
     /// - The [`Done`](Judgment::Done) judgment is the only one that
     /// should be returned in a functioning system.
-    /// - [`Continue`](Judgment::Continue) and [`Halt`](Judgment::Halt) judgments
+    /// - [`Continue`](Judgment::Continue) and [`Fault`](Judgment::Fault) judgments
     /// indicate errors in the judge and the subject, respectively.
     pub judgment: Judgment<J::Change, J::Fault>,
     /// Number of times the judge has called the task.
@@ -415,7 +502,7 @@ impl<J: Judge> PrivateOutcomeDecompose<J> for Outcome<J> {
 ///
 /// See the `test_stack` module in the source code for an example.
 ///
-/// See also: [`judge_panic`].
+/// See also: [`judge_panic`], [`Judge`], [`Outcome`].
 pub fn judge<J>(
     mut judge: J,
     mut object: impl FnMut(J::Change) -> Vec<J::Change>,
@@ -454,7 +541,7 @@ where
 {
     match judge(j, object).map(|o| o.decompose()) {
         Ok((Judgment::Done, count)) => count,
-        Ok((Judgment::Halt(why), count)) => {
+        Ok((Judgment::Fault(why), count)) => {
             panic!("subject fault (iter count: {count}): {why}")
         }
         Ok((Judgment::Continue(_), count)) => {
@@ -517,7 +604,7 @@ mod test_stack {
         ) -> Result<Judgment<Self::Change, Self::Fault>, Self::Error> {
             if self.expect.len() < reactions.len() {
                 // Defeat subjects that pop too many times, or pops when it says push.
-                return Ok(Judgment::Halt("too many reactions".to_string()));
+                return Ok(Judgment::Fault("too many reactions".to_string()));
             }
             // Compare top to bottom and terminate on the first difference.
             let mut put_back = None;
@@ -527,7 +614,7 @@ mod test_stack {
                 match eff {
                     StackChange::Value(Some(value)) if *value != exp => {
                         // Defeat subjects that pop the wrong value.
-                        return Ok(Judgment::Halt(format!(
+                        return Ok(Judgment::Fault(format!(
                             "expected {:?}, got {:?}",
                             exp, value
                         )));
@@ -542,7 +629,7 @@ mod test_stack {
                     StackChange::Value(_) => (),
                     // Subject is only allowed to produce Value, and not Push or Pop,
                     // which are reserved for the judge.
-                    _ => return Ok(Judgment::Halt("undefined response from stack".to_string())),
+                    _ => return Ok(Judgment::Fault("undefined response from stack".to_string())),
                 }
             }
             if let Some(exp) = put_back {
@@ -671,7 +758,7 @@ mod test_stack {
         let j = judge(scenario_1(), demo_impl_dumb());
         assert!(j.is_ok());
         let (j, _) = j.unwrap().decompose();
-        assert_eq!(j, Judgment::Halt("too many reactions".to_string()));
+        assert_eq!(j, Judgment::Fault("too many reactions".to_string()));
     }
 
     /// This implementation will remember the stack size, but will report '0' for everything.
@@ -699,9 +786,9 @@ mod test_stack {
         let j = judge(scenario_1(), demo_impl_zero_smart(&mut count));
         assert!(j.is_ok());
         let (j, _) = j.unwrap().decompose();
-        assert!(matches!(j, Judgment::Halt(_)), "not \"Halt\": {:?}", j);
+        assert!(matches!(j, Judgment::Fault(_)), "not \"Fault\": {:?}", j);
         let j = match j {
-            Judgment::Halt(s) => s,
+            Judgment::Fault(s) => s,
             _ => unreachable!(),
         };
         assert!(
@@ -746,7 +833,7 @@ mod test_stack {
         let (j, _) = j.unwrap().decompose();
         assert_eq!(
             j,
-            Judgment::Halt("undefined response from stack".to_string())
+            Judgment::Fault("undefined response from stack".to_string())
         );
     }
 
